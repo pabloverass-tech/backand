@@ -1,0 +1,34 @@
+Crie um ambiente virtual (muito importante)
+python -m venv venv
+venv\Scripts\activate
+
+Instale tudo
+pip install -r requirements.txt
+
+
+pip install fastapi uvicorn sqlalchemy passlib[bcrypt] python-jose[cryptography] python-dotenv python-multipart
+python3 -m pip install fastapi uvicorn sqlalchemy "passlib[bcrypt]" "python-jose[cryptography]" python-dotenv python-multipart
+
+
+pip install sqlalchemy_utils
+pip install alembic
+
+
+alembic init alembic 
+//Inicia o diretorio alembic.ini e cria a pasta alembic
+//Para funcionar dentro da pasta alembic.ini alterar o caminho do banco de dados qlalchemy.url = sqlite:///banco.db
+//Para funcionar na pasta alembic em env.py Importar o a biblioteca import sys e import os
+//Para funcionar sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+//from models import Base
+//target_metadata = Base.metadata
+
+
+
+alembic revision --autogenerate -m "Migracao Inicial"
+// Imigracao Inicial
+
+alembic upgrade head
+// Executa a Imigração no caso executa o banco de dados
+
+
+pip install requests
