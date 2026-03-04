@@ -1,68 +1,112 @@
-from fastapi import APIRouter, Depends, HTTPException
-from app.models.models import Usuario
-from app.core.dependencies import autenticar_usuario, criar_token, pegar_sessao, verificar_token
-from app.main import bcrypt_context, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY
-from app.schemas.schemas import UsuarioSchema, LoginSchema
-from sqlalchemy.orm import Session
-from jose import jwt, JWTError
-from datetime import datetime, timedelta, timezone
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
 
+from app.models.models import Usuario
+from app.core.dependencies import autenticar_usuario, criar_token, pegar_sessao
+from app.main import bcrypt_context
+from app.schemas.schemas import UsuarioSchema
+
+
+# Router responsável pelas rotas de autenticação
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
+
 
 @auth_router.get("/")
 async def home():
     """
-    Essa é a rota padrão de autenticação do nosso sistema
+    Rota base de autenticação.
+    Apenas retorna uma mensagem simples para teste.
     """
-    return {"mensagem": "Você acessou a rota padrão de autenticação", "autenticado": False}
+    return {
+        "mensagem": "Você acessou a rota padrão de autenticação",
+        "autenticado": False
+    }
+
 
 @auth_router.post("/criar_conta")
 async def criar_conta(usuario_schema: UsuarioSchema, session: Session = Depends(pegar_sessao)):
-   
-    # Consulta o banco para verificar se já existe um usuário com este e-mail
-    usuario = session.query(Usuario).filter(Usuario.email==usuario_schema.email).first()
+    """
+    Cria uma nova conta de usuário.
+
+    - Verifica se o e-mail já existe
+    - Criptografa a senha
+    - Salva no banco
+    """
+
+    # 🔎 Verifica se já existe usuário com o mesmo e-mail
+    usuario = (
+        session.query(Usuario)
+        .filter(Usuario.email == usuario_schema.email)
+        .first()
+    )
+
     if usuario:
-        # Se encontrar um usuário, lança uma exceção interrompendo o fluxo
-        raise HTTPException(status_code=400, detail="E-mail do usuário já cadastrado")
-    else:
-        # Segurança: Criptografa a senha antes de salvar no banco
-        senha_criptografada = bcrypt_context.hash(usuario_schema.senha)
-        
-         # Instancia o novo objeto Usuario com os dados recebidos
-        novo_usuario = Usuario(usuario_schema.nome, usuario_schema.email, senha_criptografada, usuario_schema.ativo, usuario_schema.admin)
-        
-        # Salva e commita a transação no banco
-        session.add(novo_usuario)
-        session.commit()
-        return {"mensagem": f"usuário cadastrado com sucesso {usuario_schema.email}"}
-    
-# async def login(dados_formulario: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(pegar_sessao)):
-# usuario = autenticar_usuario(dados_formulario.email, dados_formulario.senha, session)
-@auth_router.post("/login")
-async def login(dados_formulario: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(pegar_sessao)):
-    
-    # Tenta autenticar o usuário.
-    # Nota: O 'OAuth2PasswordRequestForm' espera o campo chamado 'username'.
-    # Seu sistema usa e-mail, então 'dados_formulario.username' na verdade contém o e-mail.
-    usuario = autenticar_usuario(dados_formulario.username, dados_formulario.password, session)
-    
-    # Se a autenticação falhar (usuário não existe ou senha errada), lança erro 400.
-    if not usuario:
-        raise HTTPException(status_code=400, detail="Usuário não encontrado ou credenciais inválidas")
-    
-    # Se a autenticação der certo, gera o Token de acesso usando o ID do usuário encontrado.
-    access_token = criar_token(usuario.id)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="E-mail do usuário já cadastrado"
+        )
+
+    # 🔐 Criptografa a senha antes de salvar
+    senha_criptografada = bcrypt_context.hash(usuario_schema.senha)
+
+    # ✅ Cria novo usuário usando parâmetros nomeados (boa prática)
+    novo_usuario = Usuario(
+        nome=usuario_schema.nome,
+        email=usuario_schema.email,
+        senha=senha_criptografada,
+        ativo=usuario_schema.ativo,
+        admin=usuario_schema.admin
+    )
+
+    # 💾 Salva no banco
+    session.add(novo_usuario)
+    session.commit()
+
+    # 🔄 Atualiza objeto com ID gerado pelo banco
+    session.refresh(novo_usuario)
+
     return {
-        "access_token": access_token,
-        "token_type": "Bearer"
+        "mensagem": f"Usuário cadastrado com sucesso {novo_usuario.email}",
+        "id": novo_usuario.id
     }
 
-@auth_router.get("/refresh")
-async def use_refresh_token(usuario: Usuario = Depends(verificar_token)):
-    # verificar o token
-    access_token = criar_token(usuario.id)
+
+@auth_router.post("/login")
+async def login(dados_formulario: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(pegar_sessao)):
+    """
+    Rota de login utilizando OAuth2 (form-data).
+
+    ⚠ O campo 'username' do OAuth2PasswordRequestForm
+    está sendo utilizado como e-mail.
+    """
+
+    # 🔎 Tenta autenticar usuário (email + senha)
+    usuario = autenticar_usuario(
+        email=dados_formulario.username,
+        senha=dados_formulario.password,
+        session=session
+    )
+
+    # ❌ Credenciais inválidas
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciais inválidas",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # 🚫 Impede login de usuário inativo
+    if not usuario.ativo:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuário inativo"
+        )
+
+    # 🔐 Gera token JWT (subject = id do usuário)
+    access_token = criar_token(subject=str(usuario.id))
+
     return {
         "access_token": access_token,
-        "token_type": "Bearer"
-        }
+        "token_type": "bearer"
+    }

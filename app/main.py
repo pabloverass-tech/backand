@@ -1,21 +1,21 @@
 from fastapi import FastAPI
-from passlib.context import CryptContext
+# from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
-from dotenv import load_dotenv
-import os
+# from dotenv import load_dotenv
+# import os
 
-load_dotenv()
+# load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+# SECRET_KEY = os.getenv("SECRET_KEY")
+# ALGORITHM = os.getenv("ALGORITHM")
+# ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
 
 # Cria a aplicação FastAPI
 app = FastAPI(
     title="SaaS API",
     version="1.0.0")
 
-bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_schema = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 # Importa as rotas de autenticação
