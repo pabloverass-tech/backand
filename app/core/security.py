@@ -56,7 +56,7 @@ def hash_password(password: str) -> str:
     """
     Gera o hash da senha usando bcrypt.
     """
-    return pwd_context.hash(password)
+    return pwd_context.hash(password[:72])  # Trunca senha para 72 bytes
 
 
 def verify_password(password: str, hashed: str) -> bool:
