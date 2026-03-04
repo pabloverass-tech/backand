@@ -1,6 +1,6 @@
 from sqlalchemy import (Column, DateTime, String, Integer, Float, Boolean, ForeignKey, Numeric, Enum)
 from sqlalchemy.orm import relationship
-from sqlalchemy_utils.types import ChoiceType
+# from sqlalchemy_utils.types import ChoiceType
 import enum
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import create_engine
