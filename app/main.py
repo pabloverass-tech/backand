@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 # from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
+from app.api.routes.auth_routes import auth_router
 # from dotenv import load_dotenv
 # import os
 
@@ -12,22 +13,15 @@ from fastapi.security import OAuth2PasswordBearer
 
 # Cria a aplicação FastAPI
 app = FastAPI(
-    title="SaaS API",
+    title="SaaS API - Autoesola Backend",
     version="1.0.0")
 
 # bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_schema = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-# Importa as rotas de autenticação
-from app.api.routes.auth_routes import auth_router
-# from app.routes.auth_routes import auth_router
-# Importa as rotas de pedidos (orders)
-# from app.routes.pedido_routes import pedidos_router
 
-# Registra as rotas na aplicação principal
+# Rotas do sistema
 app.include_router(auth_router)
-# app.include_router(auth_router)
-# app.include_router(pedidos_router)
 
 # para rodar o nosso código, executar no terminal:
 # uvicorn app.main:app --reload
